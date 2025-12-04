@@ -46,7 +46,6 @@ for row in rows:
     time_div = row.find("div", {"data-label": "Time"})
     meet_div = row.find("div", {"data-label": "Meet"})
     meet_date_div = row.find("div", {"data-label": "Meet Date"})
-    wind_div = row.find("div", {"data-label": "Wind"})
 
     place = place_div.get_text(strip=True) if place_div else ""
     athlete = athlete_div.get_text(strip=True) if athlete_div else ""
