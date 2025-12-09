@@ -93,7 +93,7 @@ BASE_URL_2025_D3_OUTDOOR = "https://www.tfrrs.org/lists/5020/2025_NCAA_Division_
 def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
     mapping = {}
 
-    for a in soup.select("li a [href^='#event']"): # Select all <a> tags within <li> that have href starting with '#event'(^=)
+    for a in soup.select("li a[href^='#event']"): # Select all <a> tags within <li> that have href starting with '#event'(^=)
         href = a.get("href")
         eventLabel = a.get_text(strip=True)
         eventID = href.split("#", 1)[1]  # Get the part after '#'
@@ -101,3 +101,11 @@ def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
 
     return mapping
 
+def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
+    base_url = "https://www.tfrrs.org/lists/5019/2025_NCAA_Division_I_Outdoor_Qualifying_FINAL"
+    
+
+def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
+
+
+def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
