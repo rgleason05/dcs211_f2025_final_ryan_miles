@@ -5,6 +5,7 @@ from typing import List, Dict
 import pandas as pd
 import argparse
 import numpy as np
+import re
 
 #Ryan and Miles
 
@@ -88,6 +89,22 @@ df["time"] = df["time"].astype(float)
 df.to_csv("100m_men_2025.csv", index=False)
 '''
 
+# CLEAN TIMES FUNCTION
+
+def clean_time(raw_time: str) -> str:
+    """
+    Cleans TFRRS time strings by removing symbols
+    Returns a normalized time string.
+    """
+    if not raw_time:
+        return ""
+
+    # remove everything that is not a digit, colon, or period
+    cleaned = re.sub(r"[^0-9:\.]", "", raw_time)
+
+    return cleaned
+
+# EXTRACT EVENT ID FUNCTION
 
 def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
     mapping = {}
@@ -100,18 +117,18 @@ def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
 
     return mapping
 
+
+
+# D1 SCRAPER FUNCTION
+
 def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
     base_url = "https://www.tfrrs.org/lists/5019/2025_NCAA_Division_I_Outdoor_Qualifying_FINAL"
 
-    # 1. Fetch webpage
     resp = requests.get(base_url, headers=headers, timeout=10)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # 2. Event ID → label mapping (event6 → "100", event22 → "10,000", etc.)
     codeMap = extractEventMapping(soup)
-
-    # Normalize the user's event name ("10,000" → "10000")
     userCodeNorm = event.replace(",", "").upper().strip()
 
     anchor_id = None
@@ -122,88 +139,290 @@ def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
             break
 
     if anchor_id is None:
-        raise ValueError(
-            f"[D1] Could not match event: {event}. Available: {sorted(codeMap.values())}"
-        )
+        raise ValueError(f"[D1] Could not match event '{event}'.")
 
     short_label = codeMap[anchor_id]
-    print(f"[D1] Matched event '{event}' -> {anchor_id} ({short_label})")
 
-    # 3. Find the event block
     event_anchor = soup.find("a", {"id": anchor_id})
-    if event_anchor is None:
-        raise RuntimeError(f"[D1] Could not find anchor id={anchor_id}")
-
     event_block = event_anchor.find_next("div", class_="row")
-    if event_block is None:
-        raise RuntimeError(f"[D1] Could not find event block for id={anchor_id}")
-
     rows = event_block.select("div.performance-list-row")
-    print(f"[D1] Found {len(rows)} rows for event {short_label}.\n")
 
-    # 4. Extract row data (your explicit style)
-    results: List[Dict] = []
+    results = []
+
+    # RELAY DETECTION
+    is_relay = short_label.startswith("4x") or "Relay" in short_label
 
     for row in rows:
-        place_div = row.find("div", {"data-label": "Place"})
-        athlete_div = row.find("div", {"data-label": "Athlete"})
-        class_year_div = row.find("div", {"data-label": "Year"})
-        team_div = row.find("div", {"data-label": "Team"})
-        time_div = row.find("div", {"data-label": "Time"})
-        meet_div = row.find("div", {"data-label": "Meet"})
-        meet_date_div = row.find("div", {"data-label": "Meet Date"})
+        place = row.find("div", {"data-label": "Place"})
+        place = place.get_text(strip=True) if place else ""
 
-        place = place_div.get_text(strip=True) if place_div else ""
-        athlete = athlete_div.get_text(strip=True) if athlete_div else ""
-        class_year = class_year_div.get_text(strip=True) if class_year_div else ""
-        team = team_div.get_text(strip=True) if team_div else ""
-        time = time_div.get_text(strip=True) if time_div else ""
-        meet = meet_div.get_text(strip=True) if meet_div else ""
-        meet_date = meet_date_div.get_text(strip=True) if meet_date_div else ""
+        raw_time = row.find("div", {"data-label": "Time"})
+        raw_time = raw_time.get_text(strip=True) if raw_time else ""
 
-        result = {
-            "year": year,                  # season year, e.g. 2025
-            "division": "D1",
-            "gender": gender.lower(),
-            "event_code": short_label,     # e.g. "100"
-            "place": place,
-            "athlete": athlete,
-            "class_year": class_year,      # FR-1 / SR-4 etc
-            "team": team,
-            "time": time,
-            "meet": meet,
-            "meet_date": meet_date,
-        }
-        results.append(result)
+        if is_relay:
+            # RELAYS ONLY: place + time + team
+            results.append({
+                "year": year,
+                "division": "D1",
+                "gender": gender.lower(),
+                "event_code": short_label,
+                "place": place,
+                "athlete": "",
+                "class_year": "",
+                "team": row.find("div", {"data-label": "Team"}).get_text(strip=True),
+                "time": clean_time(raw_time),
+                "meet": row.find("div", {"data-label": "Meet"}).get_text(strip=True),
+                "meet_date": row.find("div", {"data-label": "Meet Date"}).get_text(strip=True),
+            })
+
+        else:
+            # NORMAL EVENTS 
+            results.append({
+                "year": year,
+                "division": "D1",
+                "gender": gender.lower(),
+                "event_code": short_label,
+                "place": place,
+                "athlete": row.find("div", {"data-label": "Athlete"}).get_text(strip=True),
+                "class_year": row.find("div", {"data-label": "Year"}).get_text(strip=True),
+                "team": row.find("div", {"data-label": "Team"}).get_text(strip=True),
+                "time": clean_time(raw_time),
+                "meet": row.find("div", {"data-label": "Meet"}).get_text(strip=True),
+                "meet_date": row.find("div", {"data-label": "Meet Date"}).get_text(strip=True),
+            })
 
     df = pd.DataFrame(results)
     df["place"] = pd.to_numeric(df["place"], errors="coerce")
-    df["time"] = pd.to_numeric(df["time"], errors="coerce")
 
-    TOP16_EVENTS = {"4x100", "4x400", "Dec", "Hep"}
+    # QUALIFYING LOGIC
+    RELAYS_TOP16 = {"4x100", "4x400"}
+    MULTI_TOP24 = {"Dec", "Hep"}
 
-    if short_label in TOP16_EVENTS:
-        qualifying_cutoff = 16
+    if short_label in RELAYS_TOP16:
+        cutoff = 16
+    elif short_label in MULTI_TOP24:
+        cutoff = 24
     else:
-        qualifying_cutoff = 22
+        cutoff = 48
 
-    df["qualifying_cutoff"] = qualifying_cutoff
-    df["qualifies"] = df["place"] <= qualifying_cutoff
+    df["qualifying_cutoff"] = cutoff
+    df["qualifies"] = df["place"] <= cutoff
 
     return df
 
 
 
-#def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
+#  D2 SCRAPER FUNCTION
+
+def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
+    base_url = "https://www.tfrrs.org/lists/5018/2025_NCAA_Division_II_Outdoor_Qualifying_FINAL"
+
+    resp = requests.get(base_url, headers=headers, timeout=10)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    codeMap = extractEventMapping(soup)
+    userCodeNorm = event.replace(",", "").upper().strip()
+
+    anchor_id = None
+    for eid, label in codeMap.items():
+        if label.replace(",", "").upper().strip() == userCodeNorm:
+            anchor_id = eid
+            break
+
+    if anchor_id is None:
+        raise ValueError(f"[D2] Could not match event '{event}'.")
+
+    short_label = codeMap[anchor_id]
+
+    event_block = soup.find("a", {"id": anchor_id}).find_next("div", class_="row")
+    rows = event_block.select("div.performance-list-row")
+
+    results = []
+
+    # RELAY DETECTION
+    is_relay = short_label.startswith("4x") or "Relay" in short_label
+
+    for row in rows:
+        place = row.find("div", {"data-label": "Place"})
+        place = place.get_text(strip=True) if place else ""
+
+        raw_time = row.find("div", {"data-label": "Time"})
+        raw_time = raw_time.get_text(strip=True) if raw_time else ""
+
+        if is_relay:
+            # RELAYS: only place + time + team
+            results.append({
+                "year": year,
+                "division": "D2",
+                "gender": gender.lower(),
+                "event_code": short_label,
+                "place": place,
+                "athlete": "",
+                "class_year": "",
+                "team": row.find("div", {"data-label": "Team"}).get_text(strip=True),
+                "time": clean_time(raw_time),
+                "meet": row.find("div", {"data-label": "Meet"}).get_text(strip=True),
+                "meet_date": row.find("div", {"data-label": "Meet Date"}).get_text(strip=True),
+            })
+        else:
+            # INDIVIDUAL EVENTS
+            results.append({
+                "year": year,
+                "division": "D2",
+                "gender": gender.lower(),
+                "event_code": short_label,
+                "place": place,
+                "athlete": row.find("div", {"data-label": "Athlete"}).get_text(strip=True),
+                "class_year": row.find("div", {"data-label": "Year"}).get_text(strip=True),
+                "team": row.find("div", {"data-label": "Team"}).get_text(strip=True),
+                "time": clean_time(raw_time),
+                "meet": row.find("div", {"data-label": "Meet"}).get_text(strip=True),
+                "meet_date": row.find("div", {"data-label": "Meet Date"}).get_text(strip=True),
+            })
+
+    df = pd.DataFrame(results)
+    df["place"] = pd.to_numeric(df["place"], errors="coerce")
+
+    # QUALIFYING LOGIC
+    RELAYS_TOP16 = {"4x100", "4x400"}
+    MULTI_TOP24 = {"Dec", "Hep"}
+
+    if short_label in RELAYS_TOP16:
+        cutoff = 16
+    elif short_label in MULTI_TOP24:
+        cutoff = 24
+    else:
+        cutoff = 22
+
+    df["qualifying_cutoff"] = cutoff
+    df["qualifies"] = df["place"] <= cutoff
+
+    return df
 
 
-#def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
+
+
+#  D3 SCRAPER FUNCTION
+
+def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
+    base_url = "https://www.tfrrs.org/lists/5020/2025_NCAA_Division_III_Outdoor_Qualifying_FINAL"
+
+    resp = requests.get(base_url, headers=headers, timeout=10)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    codeMap = extractEventMapping(soup)
+    userCodeNorm = event.replace(",", "").upper().strip()
+
+    anchor_id = None
+    for eid, label in codeMap.items():
+        if label.replace(",", "").upper().strip() == userCodeNorm:
+            anchor_id = eid
+            break
+
+    if anchor_id is None:
+        raise ValueError(f"[D3] Could not match event '{event}'.")
+
+    short_label = codeMap[anchor_id]
+
+    event_block = soup.find("a", {"id": anchor_id}).find_next("div", class_="row")
+    rows = event_block.select("div.performance-list-row")
+
+    results = []
+
+    # RELAY DETECTION
+    is_relay = short_label.startswith("4x") or "Relay" in short_label
+
+    for row in rows:
+        place = row.find("div", {"data-label": "Place"})
+        place = place.get_text(strip=True) if place else ""
+
+        raw_time = row.find("div", {"data-label": "Time"})
+        raw_time = raw_time.get_text(strip=True) if raw_time else ""
+
+        if is_relay:
+            # RELAYS: only place + time + team
+            results.append({
+                "year": year,
+                "division": "D3",
+                "gender": gender.lower(),
+                "event_code": short_label,
+                "place": place,
+                "athlete": "",
+                "class_year": "",
+                "team": row.find("div", {"data-label": "Team"}).get_text(strip=True),
+                "time": clean_time(raw_time),
+                "meet": row.find("div", {"data-label": "Meet"}).get_text(strip=True),
+                "meet_date": row.find("div", {"data-label": "Meet Date"}).get_text(strip=True),
+            })
+        else:
+            # INDIVIDUAL EVENTS
+            results.append({
+                "year": year,
+                "division": "D3",
+                "gender": gender.lower(),
+                "event_code": short_label,
+                "place": place,
+                "athlete": row.find("div", {"data-label": "Athlete"}).get_text(strip=True),
+                "class_year": row.find("div", {"data-label": "Year"}).get_text(strip=True),
+                "team": row.find("div", {"data-label": "Team"}).get_text(strip=True),
+                "time": clean_time(raw_time),
+                "meet": row.find("div", {"data-label": "Meet"}).get_text(strip=True),
+                "meet_date": row.find("div", {"data-label": "Meet Date"}).get_text(strip=True),
+            })
+
+    df = pd.DataFrame(results)
+    df["place"] = pd.to_numeric(df["place"], errors="coerce")
+
+    # QUALIFYING LOGIC
+    RELAYS_TOP16 = {"4x100", "4x400"}
+    MULTI_TOP24 = {"Dec", "Hep"}
+
+    if short_label in RELAYS_TOP16:
+        cutoff = 16
+    elif short_label in MULTI_TOP24:
+        cutoff = 24
+    else:
+        cutoff = 22
+
+    df["qualifying_cutoff"] = cutoff
+    df["qualifies"] = df["place"] <= cutoff
+
+    return df
 
 
 
+# TEST BLOCK
+
+def test_scraper():
+    print("\n=== TEST D1 1500m MEN ===")
+    df1 = scrapeTffrsD1(2025, "men", "1500")
+    print(df1[df1["qualifies"] == True][["place", "athlete", "time"]])
+
+    print("\n=== TEST D2 100m MEN ===")
+    df2 = scrapeTffrsD2(2025, "men", "100")
+    print(df2[df2["qualifies"] == True][["place", "athlete", "time"]])
+
+    print("\n=== TEST D3 5000m MEN ===")
+    df3 = scrapeTffrsD3(2025, "men", "5000")
+    print(df3[df3["qualifies"] == True][["place", "athlete", "time"]])
+    
+    print("\n=== TEST D1 4x400 RELAY MEN ===")
+    df_relay = scrapeTffrsD1(2025, "men", "4x400")
+    print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
+    
+    print("\n=== TEST D2 4x100 RELAY MEN ===")
+    df_relay = scrapeTffrsD2(2025, "men", "4x100")
+    print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
+
+    print("\n=== TEST D3 4x400 RELAY MEN ===")
+    df_relay = scrapeTffrsD3(2025, "men", "4x400")
+    print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
+
+   
+
+
+# MAIN
 if __name__ == "__main__":
-    df_test = scrapeTffrsD1(2025, "men", "100")
-    print(df_test.head(10))  # show first 10 rows
-    print("\n=== QUALIFIERS ONLY ===")
-    qualifiers = df_test[df_test["qualifies"]]
-    print(qualifiers[["place", "athlete", "time"]])
+    test_scraper()
