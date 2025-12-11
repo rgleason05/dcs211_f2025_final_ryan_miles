@@ -122,7 +122,7 @@ def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
 # D1 SCRAPER FUNCTION
 
 def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
-    base_url = "https://www.tfrrs.org/lists/5019/2025_NCAA_Division_I_Outdoor_Qualifying_FINAL"
+    base_url = "https://www.tfrrs.org/lists/5018/2025_NCAA_Division_I_Outdoor_Qualifying_FINAL"
 
     resp = requests.get(base_url, headers=headers, timeout=10)
     resp.raise_for_status()
@@ -419,10 +419,11 @@ def test_scraper():
     print("\n=== TEST D3 4x400 RELAY MEN ===")
     df_relay = scrapeTffrsD3(2025, "men", "4x400")
     print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
+    
+    print("\nD1 division column check:", df1["division"].unique())
+    print("D2 division column check:", df2["division"].unique())
 
-   
 
 
-# MAIN
 if __name__ == "__main__":
     test_scraper()
