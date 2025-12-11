@@ -425,12 +425,10 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
     return df
 
-'''
+
 #make CSV's
 
-ALL_EVENTS = [
-    "100", "200", "400", "800", "1500", "5000", "10000","110H", "400H","4x100", "4x400"
-]
+"""
 DIVISIONS = {
     "D1": scrapeTffrsD1,
     "D2": scrapeTffrsD2,
@@ -442,7 +440,20 @@ GENDERS = ["men", "women"]
 for div, scraper in DIVISIONS.items():
     for year in YEARS:
         for gender in GENDERS:
-            for event in ALL_EVENTS:
+
+            # Gender‑specific hurdle events
+            if gender == "men":
+                events = [
+                    "100", "200", "400", "800", "1500", "5000", "10000",
+                    "110H", "400H", "4x100", "4x400"
+                ]
+            else:  # women
+                events = [
+                    "100", "200", "400", "800", "1500", "5000", "10000",
+                    "100H", "400H", "4x100", "4x400"
+                ]
+
+            for event in events:
                 try:
                     df = scraper(year, gender, event)
                     filename = f"{div}_{year}_{event}_{gender}.csv"
@@ -460,7 +471,7 @@ big_df = pd.concat(all_dfs, ignore_index=True)
 big_df.to_csv("all_results_2021_2025.csv", index=False)
 
 print("Master CSV created!")
-'''
+"""
 
 def time_to_seconds(t: str) -> float:
     """
@@ -525,7 +536,6 @@ def predict_qualifying_for(big_df: pd.DataFrame,
     event_norm = event
     cutoff = cutoff_place_for(div, event_norm)
 
-    
 
     # Filter to the rows for this group
     df_g = big_df[
@@ -581,19 +591,29 @@ def predict_qualifying_for(big_df: pd.DataFrame,
 def run_all_predictions(big_df: pd.DataFrame):
     DIVISIONS = ["D1", "D2", "D3"]
     GENDERS = ["men", "women"]
-    EVENTS = [
+
+    # Base events that apply to both genders
+    BASE_EVENTS = [
         "100", "200", "400", "800", "1500", "5000", "10,000",
-        "110H", "400H", "4x100", "4x400"
+        "400H", "4x100", "4x400"
     ]
 
     print("\n================ ALL 2026 PREDICTIONS ================\n")
 
     for div in DIVISIONS:
         for gender in GENDERS:
+
+            # Gender‑specific hurdle event
+            hurdle_event = "110H" if gender == "men" else "100H"
+
+            # Build final list for this gender
+            EVENTS = BASE_EVENTS + [hurdle_event]
+
             for event in EVENTS:
                 predict_qualifying_for(big_df, div, gender, event)
 
     print("\n================ DONE ================\n")
+
 
 
 '''
