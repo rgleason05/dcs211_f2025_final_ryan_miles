@@ -6,6 +6,11 @@ import pandas as pd
 import argparse
 import numpy as np
 import re
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+import glob
+from sklearn.neighbors import KNeighborsRegressor
 
 #Ryan and Miles
 
@@ -207,12 +212,9 @@ def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
 
     # QUALIFYING LOGIC
     RELAYS_TOP16 = {"4x100", "4x400"}
-    MULTI_TOP24 = {"Dec", "Hep"}
 
     if short_label in RELAYS_TOP16:
         cutoff = 16
-    elif short_label in MULTI_TOP24:
-        cutoff = 24
     else:
         cutoff = 48
 
@@ -310,12 +312,9 @@ def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
 
     # QUALIFYING LOGIC
     RELAYS_TOP16 = {"4x100", "4x400"}
-    MULTI_TOP24 = {"Dec", "Hep"}
 
     if short_label in RELAYS_TOP16:
         cutoff = 16
-    elif short_label in MULTI_TOP24:
-        cutoff = 24
     else:
         cutoff = 22
 
@@ -415,12 +414,9 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
     # QUALIFYING LOGIC
     RELAYS_TOP16 = {"4x100", "4x400"}
-    MULTI_TOP24 = {"Dec", "Hep"}
 
     if short_label in RELAYS_TOP16:
         cutoff = 16
-    elif short_label in MULTI_TOP24:
-        cutoff = 24
     else:
         cutoff = 22
 
@@ -429,10 +425,168 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
     return df
 
+'''
+#make CSV's
+
+ALL_EVENTS = [
+    "100", "200", "400", "800", "1500", "5000", "10000","110H", "400H","4x100", "4x400"
+]
+DIVISIONS = {
+    "D1": scrapeTffrsD1,
+    "D2": scrapeTffrsD2,
+    "D3": scrapeTffrsD3
+}
+YEARS = [2021, 2022, 2023, 2024, 2025]
+GENDERS = ["men", "women"]
+
+for div, scraper in DIVISIONS.items():
+    for year in YEARS:
+        for gender in GENDERS:
+            for event in ALL_EVENTS:
+                try:
+                    df = scraper(year, gender, event)
+                    filename = f"{div}_{year}_{event}_{gender}.csv"
+                    df.to_csv(filename, index=False)
+                    print("Saved:", filename)
+                except Exception as e:
+                    print("Error:", div, year, gender, event, e)
 
 
-# TEST BLOCK
+files = glob.glob("*.csv")
 
+all_dfs = [pd.read_csv(f) for f in files]
+
+big_df = pd.concat(all_dfs, ignore_index=True)
+big_df.to_csv("all_results_2021_2025.csv", index=False)
+
+print("Master CSV created!")
+'''
+
+def time_to_seconds(t: str) -> float:
+    """
+    Convert a time string like '10.22', '1:48.35', '14:03.12'
+    into total seconds as a float.
+    """
+    t = str(t).strip()
+    if not t:
+        return float("nan")
+
+    parts = t.split(":")
+    
+    if len(parts) == 1:
+            # e.g. '10.22'
+            return float(parts[0])
+    elif len(parts) == 2:
+        # MM:SS.xx
+        m = float(parts[0])
+        s = float(parts[1])
+        return m * 60 + s
+    else:
+        raise ValueError("Unexpected time format")
+
+
+
+def seconds_to_time_str(seconds: float) -> str:
+    """
+    Convert seconds back into a string like '10.22' or '3:45.12'.
+    Very simple: MM:SS.ss if >= 60, else SS.ss
+    """
+    if seconds < 60:
+        return f"{seconds:0.2f}"
+
+    m = int(seconds // 60)
+    s = seconds - m * 60
+    return f"{m}:{s:05.2f}"  # mm:ss.ss
+        
+
+def cutoff_place_for(division: str, event: str) -> int:
+    """
+    Return the qualifying place for this division/event.
+    Relays: 16
+    D1: 48
+    D2/D3: 22
+    """
+    event_norm = event.replace(",", "").upper().strip()
+    is_relay = event_norm.startswith("4X") or "RELAY" in event_norm
+
+    if is_relay:
+        return 16
+    if division.upper() == "D1":
+        return 48
+    else:
+        return 22
+
+def predict_qualifying_for(big_df: pd.DataFrame,
+                           division: str,
+                           gender: str,
+                           event: str):
+    """
+    Train a KNN model for a single (division, gender, event),
+    using years 2021-2025 as X and qualifying time (cutoff place) as y.
+    Then predict 2026.
+    """
+    div = division.upper()
+    gender_norm = gender.lower()
+    event_norm = event
+    cutoff = cutoff_place_for(div, event_norm)
+
+    # Filter to the rows for this group
+    df_g = big_df[
+        (big_df["division"] == div) &
+        (big_df["gender"] == gender_norm) &
+        (big_df["event_code"] == event_norm) &
+        (big_df["place"] == cutoff)
+    ].copy()
+
+    if df_g.empty:
+        print(f"No data for {div} {gender_norm} {event_norm} at place {cutoff}, skipping.")
+        return
+
+    # Convert times to seconds
+    df_g["time_seconds"] = df_g["time"].apply(time_to_seconds)
+    df_g = df_g.dropna(subset=["time_seconds"])
+
+    if df_g.empty:
+        print(f"No valid times for {div} {gender_norm} {event_norm}, skipping.")
+        return
+
+    # Features: just year; Target: time in seconds
+    X = df_g[["year"]].values
+    y = df_g["time_seconds"].values
+
+    # Choose k not bigger than number of samples
+    k = min(3, len(X))
+    knn = KNeighborsRegressor(n_neighbors=k, weights="distance")
+    knn.fit(X, y)
+
+    pred_sec = knn.predict([[2026]])[0]
+    pred_str = seconds_to_time_str(pred_sec)
+
+    print("\n==================================================")
+    print(f"Predicted qualifying mark for {div} {gender_norm} {event_norm}, 2026:")
+    print(f"→ Qualifying place: {cutoff}")
+    print(f"→ Predicted cutoff time: {pred_str}")
+    print("==================================================")
+
+def run_all_predictions(big_df: pd.DataFrame):
+    DIVISIONS = ["D1", "D2", "D3"]
+    GENDERS = ["men", "women"]
+    EVENTS = [
+        "100", "200", "400", "800", "1500", "5000", "10000",
+        "110H", "400H", "4x100", "4x400"
+    ]
+
+    print("\n================ ALL 2026 PREDICTIONS ================\n")
+
+    for div in DIVISIONS:
+        for gender in GENDERS:
+            for event in EVENTS:
+                predict_qualifying_for(big_df, div, gender, event)
+
+    print("\n================ DONE ================\n")
+
+
+'''
 def test_scraper():
     print("\n=== TEST D1 1500m MEN ===")
     df1 = scrapeTffrsD1(2023, "men", "1500")
@@ -457,8 +611,16 @@ def test_scraper():
     print("\n=== TEST D3 4x400 RELAY MEN ===")
     df_relay = scrapeTffrsD3(2025, "men", "4x400")
     print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
+'''
+    
+def main():
+    # Load the master dataset
+    big_df = pd.read_csv("all_results_2021_2025.csv")
+    print("Loaded master CSV with", len(big_df), "rows")
 
-
+    # Run predictions for every event/div/gender
+    run_all_predictions(big_df)
 
 if __name__ == "__main__":
-    test_scraper()
+    main()
+    #test_scraper()
