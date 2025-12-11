@@ -520,15 +520,12 @@ def predict_qualifying_for(big_df: pd.DataFrame,
                            division: str,
                            gender: str,
                            event: str):
-    """
-    Train a KNN model for a single (division, gender, event),
-    using years 2021-2025 as X and qualifying time (cutoff place) as y.
-    Then predict 2026.
-    """
     div = division.upper()
     gender_norm = gender.lower()
     event_norm = event
     cutoff = cutoff_place_for(div, event_norm)
+
+    
 
     # Filter to the rows for this group
     df_g = big_df[
@@ -538,11 +535,25 @@ def predict_qualifying_for(big_df: pd.DataFrame,
         (big_df["place"] == cutoff)
     ].copy()
 
+    # If missing (fallback)
     if df_g.empty:
-        print(f"No data for {div} {gender_norm} {event_norm} at place {cutoff}, skipping.")
-        return
+        available = big_df[
+            (big_df["division"] == div) &
+            (big_df["gender"] == gender_norm) &
+            (big_df["event_code"] == event_norm)
+        ]["place"].unique()
 
-    # Convert times to seconds
+        lower = [p for p in available if p < cutoff]
+        if lower:
+            fallback_place = max(lower)
+            df_g = big_df[
+                (big_df["division"] == div) &
+                (big_df["gender"] == gender_norm) &
+                (big_df["event_code"] == event_norm) &
+                (big_df["place"] == fallback_place)
+            ].copy()
+            
+
     df_g["time_seconds"] = df_g["time"].apply(time_to_seconds)
     df_g = df_g.dropna(subset=["time_seconds"])
 
@@ -550,11 +561,9 @@ def predict_qualifying_for(big_df: pd.DataFrame,
         print(f"No valid times for {div} {gender_norm} {event_norm}, skipping.")
         return
 
-    # Features: just year; Target: time in seconds
     X = df_g[["year"]].values
     y = df_g["time_seconds"].values
 
-    # Choose k not bigger than number of samples
     k = min(3, len(X))
     knn = KNeighborsRegressor(n_neighbors=k, weights="distance")
     knn.fit(X, y)
@@ -568,11 +577,12 @@ def predict_qualifying_for(big_df: pd.DataFrame,
     print(f"→ Predicted cutoff time: {pred_str}")
     print("==================================================")
 
+
 def run_all_predictions(big_df: pd.DataFrame):
     DIVISIONS = ["D1", "D2", "D3"]
     GENDERS = ["men", "women"]
     EVENTS = [
-        "100", "200", "400", "800", "1500", "5000", "10000",
+        "100", "200", "400", "800", "1500", "5000", "10,000",
         "110H", "400H", "4x100", "4x400"
     ]
 
