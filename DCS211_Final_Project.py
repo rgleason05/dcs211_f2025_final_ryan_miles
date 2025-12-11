@@ -120,9 +120,16 @@ def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
 
 
 # D1 SCRAPER FUNCTION
+D1_URLS = {
+    2025: "https://www.tfrrs.org/lists/5018/2025_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2024: "https://www.tfrrs.org/lists/4515/2024_NCAA_Division_I_Rankings_FINAL",
+    2023: "https://www.tfrrs.org/lists/4044/2023_NCAA_Division_I_All_Schools_Rankings",
+    2022: "https://www.tfrrs.org/lists/3711/2022_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2021: "https://api.tfrrs.org/lists/3191/2021_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+}
 
 def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
-    base_url = "https://www.tfrrs.org/lists/5018/2025_NCAA_Division_I_Outdoor_Qualifying_FINAL"
+    base_url = D1_URLS[year]
 
     resp = requests.get(base_url, headers=headers, timeout=10)
     resp.raise_for_status()
@@ -218,8 +225,16 @@ def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
 
 #  D2 SCRAPER FUNCTION
 
+D2_URLS = {
+    2025: "https://www.tfrrs.org/lists/5019/2025_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2024: "https://mobile.tfrrs.org/lists/4516/2024_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2023: "https://www.tfrrs.org/lists/4045/2023_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2022: "https://www.tfrrs.org/lists/3595/2022_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2021: "https://www.tfrrs.org/lists/3194/2021_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+}
+
 def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
-    base_url = "https://www.tfrrs.org/lists/5018/2025_NCAA_Division_II_Outdoor_Qualifying_FINAL"
+    base_url = D2_URLS[year]
 
     resp = requests.get(base_url, headers=headers, timeout=10)
     resp.raise_for_status()
@@ -314,8 +329,17 @@ def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
 
 #  D3 SCRAPER FUNCTION
 
+D3_URLS = {
+    2025: "https://www.tfrrs.org/lists/5020/2025_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2024: "https://tfrrs.org/lists/4517/2024_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2023: "https://tf.tfrrs.org/lists/4043/2023_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2022: "https://www.tfrrs.org/lists/3714/2022_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2021: "https://api.tfrrs.org/lists/3195/2021_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+}
+
 def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
-    base_url = "https://www.tfrrs.org/lists/5020/2025_NCAA_Division_III_Outdoor_Qualifying_FINAL"
+    base_url = D3_URLS[year]
+
 
     resp = requests.get(base_url, headers=headers, timeout=10)
     resp.raise_for_status()
@@ -411,15 +435,15 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
 def test_scraper():
     print("\n=== TEST D1 1500m MEN ===")
-    df1 = scrapeTffrsD1(2025, "men", "1500")
+    df1 = scrapeTffrsD1(2023, "men", "1500")
     print(df1[df1["qualifies"] == True][["place", "athlete", "time"]])
 
     print("\n=== TEST D2 100m MEN ===")
-    df2 = scrapeTffrsD2(2025, "men", "100")
+    df2 = scrapeTffrsD2(2022, "men", "100")
     print(df2[df2["qualifies"] == True][["place", "athlete", "time"]])
 
     print("\n=== TEST D3 5000m WOMEN ===")
-    df3 = scrapeTffrsD3(2025, "women", "5000")
+    df3 = scrapeTffrsD3(2024, "women", "5000")
     print(df3[df3["qualifies"] == True][["place", "athlete", "time"]])
     
     print("\n=== TEST D1 4x400 RELAY MEN ===")
