@@ -97,17 +97,23 @@ df.to_csv("100m_men_2025.csv", index=False)
 # CLEAN TIMES FUNCTION
 
 def clean_time(raw_time: str) -> str:
+     """
+    Normalize TFRRS time strings by removing any unwanted characters.
+    This function keeps only digits, colons, and periods to preserve
+    valid time formats.
+    
+    Parameters:
+        raw_time (str): The raw time string scraped from TFRRS.
+
+    Returns:
+        str: A cleaned, normalized time string. 
     """
-    Cleans TFRRS time strings by removing symbols
-    Returns a normalized time string.
-    """
-    if not raw_time:
+     if not raw_time:
         return ""
 
-    # remove everything that is not a digit, colon, or period
-    cleaned = re.sub(r"[^0-9:\.]", "", raw_time)
+        cleaned = re.sub(r"[^0-9:\.]", "", raw_time)
 
-    return cleaned
+        return cleaned
 
 # EXTRACT EVENT ID FUNCTION
 
