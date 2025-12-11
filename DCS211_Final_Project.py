@@ -145,6 +145,10 @@ def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
 
     event_anchor = soup.find("a", {"id": anchor_id})
     event_block = event_anchor.find_next("div", class_="row")
+
+    #handle women's results
+    if gender.lower() == "women":
+        event_block = event_block.find_next("div", class_="row")
     rows = event_block.select("div.performance-list-row")
 
     results = []
@@ -235,7 +239,12 @@ def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
 
     short_label = codeMap[anchor_id]
 
-    event_block = soup.find("a", {"id": anchor_id}).find_next("div", class_="row")
+    event_anchor = soup.find("a", {"id": anchor_id})
+    event_block = event_anchor.find_next("div", class_="row")
+
+    #handle women's results
+    if gender.lower() == "women":
+        event_block = event_block.find_next("div", class_="row")
     rows = event_block.select("div.performance-list-row")
 
     results = []
@@ -326,7 +335,12 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
     short_label = codeMap[anchor_id]
 
-    event_block = soup.find("a", {"id": anchor_id}).find_next("div", class_="row")
+    event_anchor = soup.find("a", {"id": anchor_id})
+    event_block = event_anchor.find_next("div", class_="row")
+
+    #handle women's results
+    if gender.lower() == "women":
+        event_block = event_block.find_next("div", class_="row")
     rows = event_block.select("div.performance-list-row")
 
     results = []
@@ -404,8 +418,8 @@ def test_scraper():
     df2 = scrapeTffrsD2(2025, "men", "100")
     print(df2[df2["qualifies"] == True][["place", "athlete", "time"]])
 
-    print("\n=== TEST D3 5000m MEN ===")
-    df3 = scrapeTffrsD3(2025, "men", "5000")
+    print("\n=== TEST D3 5000m WOMEN ===")
+    df3 = scrapeTffrsD3(2025, "women", "5000")
     print(df3[df3["qualifies"] == True][["place", "athlete", "time"]])
     
     print("\n=== TEST D1 4x400 RELAY MEN ===")
@@ -419,9 +433,6 @@ def test_scraper():
     print("\n=== TEST D3 4x400 RELAY MEN ===")
     df_relay = scrapeTffrsD3(2025, "men", "4x400")
     print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
-    
-    print("\nD1 division column check:", df1["division"].unique())
-    print("D2 division column check:", df2["division"].unique())
 
 
 
