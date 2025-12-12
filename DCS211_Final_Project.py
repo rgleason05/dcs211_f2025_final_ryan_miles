@@ -7,8 +7,6 @@ import argparse
 import numpy as np
 import re
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
 import glob
 from sklearn.neighbors import KNeighborsRegressor
 
@@ -110,10 +108,10 @@ def clean_time(raw_time: str) -> str:
     """
      if not raw_time:
         return ""
-
-        cleaned = re.sub(r"[^0-9:\.]", "", raw_time)
-
-        return cleaned
+     
+     cleaned = re.sub(r"[^0-9:\.]", "", raw_time)
+        
+     return cleaned
 
 # EXTRACT EVENT ID FUNCTION
 
@@ -469,12 +467,13 @@ for div, scraper in DIVISIONS.items():
                     print("Error:", div, year, gender, event, e)
 
 
-files = glob.glob("*.csv")
+files = glob.glob("*.csv") # Finds every file in the current folder that ends with .csv  and puts them in a list
 
-all_dfs = [pd.read_csv(f) for f in files]
+all_dfs = [pd.read_csv(f) for f in files] # Loops through the list of filenames and reads each CSV into a DataFrame
+                                          # all_dfs becomes a list like: [df1, df2, df3, ...]
 
-big_df = pd.concat(all_dfs, ignore_index=True)
-big_df.to_csv("all_results_2021_2025.csv", index=False)
+big_df = pd.concat(all_dfs, ignore_index=True) #Combines all DataFrames into one giant DataFrame
+big_df.to_csv("all_results_2021_2025.csv", index=False)  
 
 print("Master CSV created!")
 """
@@ -544,15 +543,15 @@ def predict_qualifying_for(big_df: pd.DataFrame,
 
 
     # Filter to the rows for this group
-    df_g = big_df[
+    df_slice = big_df[
         (big_df["division"] == div) &
         (big_df["gender"] == gender_norm) &
         (big_df["event_code"] == event_norm) &
         (big_df["place"] == cutoff)
     ].copy()
 
-    # If missing (fallback)
-    if df_g.empty:
+    # If missing 
+    if df_slice.empty:
         available = big_df[
             (big_df["division"] == div) &
             (big_df["gender"] == gender_norm) &
@@ -562,7 +561,7 @@ def predict_qualifying_for(big_df: pd.DataFrame,
         lower = [p for p in available if p < cutoff]
         if lower:
             fallback_place = max(lower)
-            df_g = big_df[
+            df_slice = big_df[
                 (big_df["division"] == div) &
                 (big_df["gender"] == gender_norm) &
                 (big_df["event_code"] == event_norm) &
@@ -570,21 +569,21 @@ def predict_qualifying_for(big_df: pd.DataFrame,
             ].copy()
             
 
-    df_g["time_seconds"] = df_g["time"].apply(time_to_seconds)
-    df_g = df_g.dropna(subset=["time_seconds"])
+    df_slice["time_seconds"] = df_slice["time"].apply(time_to_seconds)
+    df_slice = df_slice.dropna(subset=["time_seconds"])
 
-    if df_g.empty:
-        print(f"No valid times for {div} {gender_norm} {event_norm}, skipping.")
+    if df_slice.empty:
+        print(f"No valid times for {div} {gender_norm} {event_norm}")
         return
 
-    X = df_g[["year"]].values
-    y = df_g["time_seconds"].values
+    X = df_slice[["year"]].values #convert to NumPy array 
+    y = df_slice["time_seconds"].values #convert to NumPy array
 
     k = min(3, len(X))
-    knn = KNeighborsRegressor(n_neighbors=k, weights="distance")
-    knn.fit(X, y)
+    knn = KNeighborsRegressor(n_neighbors=k, weights="distance") #K nearest neighbors regression model, and making closer years count more than older years
+    knn.fit(X, y) #.fit to train with year and time(converted to seconds)
 
-    pred_sec = knn.predict([[2026]])[0]
+    pred_sec = knn.predict([[2026]])[0] #2026 array with 1 value (predicted seconds)
     pred_str = seconds_to_time_str(pred_sec)
 
     print("\n==================================================")
@@ -622,7 +621,7 @@ def run_all_predictions(big_df: pd.DataFrame):
 
 
 
-'''
+
 def test_scraper():
     print("\n=== TEST D1 1500m MEN ===")
     df1 = scrapeTffrsD1(2023, "men", "1500")
@@ -647,7 +646,7 @@ def test_scraper():
     print("\n=== TEST D3 4x400 RELAY MEN ===")
     df_relay = scrapeTffrsD3(2025, "men", "4x400")
     print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
-'''
+
     
 def main():
     # Load the master dataset
@@ -659,4 +658,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    #test_scraper()
+    test_scraper()
