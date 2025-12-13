@@ -429,10 +429,10 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
     return df
 
-
+''' 
 #make CSV's
 
-"""
+
 DIVISIONS = {
     "D1": scrapeTffrsD1,
     "D2": scrapeTffrsD2,
@@ -475,8 +475,7 @@ all_dfs = [pd.read_csv(f) for f in files] # Loops through the list of filenames 
 big_df = pd.concat(all_dfs, ignore_index=True) #Combines all DataFrames into one giant DataFrame
 big_df.to_csv("all_results_2021_2025.csv", index=False)  
 
-print("Master CSV created!")
-"""
+''' 
 
 def time_to_seconds(t: str) -> float:
     """
@@ -592,7 +591,7 @@ def predict_qualifying_for(big_df: pd.DataFrame,
     print(f"→ Predicted cutoff time: {pred_str}")
     print("==================================================")
 
-
+'''
 def run_all_predictions(big_df: pd.DataFrame):
     DIVISIONS = ["D1", "D2", "D3"]
     GENDERS = ["men", "women"]
@@ -608,7 +607,7 @@ def run_all_predictions(big_df: pd.DataFrame):
     for div in DIVISIONS:
         for gender in GENDERS:
 
-            # Gender‑specific hurdle event
+            # Gender specific hurdle event
             hurdle_event = "110H" if gender == "men" else "100H"
 
             # Build final list for this gender
@@ -647,15 +646,72 @@ def test_scraper():
     df_relay = scrapeTffrsD3(2025, "men", "4x400")
     print(df_relay[df_relay["qualifies"] == True][["place", "team", "time"]])
 
-    
+''' 
+
+def getScraperForDivision(division: str):
+    div = division.upper()
+    if div == "D1":
+        return scrapeTffrsD1
+    elif div == "D2":
+        return scrapeTffrsD2
+    else: 
+        return scrapeTffrsD3
+
 def main():
+    ''' 
     # Load the master dataset
     big_df = pd.read_csv("all_results_2021_2025.csv")
     print("Loaded master CSV with", len(big_df), "rows")
-
+    
     # Run predictions for every event/div/gender
     run_all_predictions(big_df)
+    ''' 
+    parser = argparse.ArgumentParser(description="TFFRS scraper + predict NCAA qualifying marks for 2026")
+    parser.add_argument("year", type=int, help="Year of interest (2021-2026)",)
+    parser.add_argument("division", type=str, help="NCAA division (D1, D2, or D3)",)
+    parser.add_argument("gender", type=str, help="Gender (men or women)",)
+    parser.add_argument("event", type=str, help='Event code (e.g. "100", "1500", "4x100", "100H"/"110H")',)
+
+    args = parser.parse_args()
+
+    year = args.year
+    division = args.division
+    gender = args.gender
+    event = args.event
+
+    if 2021 <= year <= 2025:
+        scraper = getScraperForDivision(division)
+        print(f"Scraping {division} {gender} {event} for {year}...")
+        df = scraper(year, gender, event)
+
+        if df.empty:
+            print("No data returned from scraper.")
+            return
+
+        cutoff = df["qualifying_cutoff"].iloc[0]
+        numQual = (df["qualifies"] == True).sum()
+
+        print(f"Cutoff place: {cutoff}, # qualifiers: {numQual}")
+        print("\n================ Scraped Results ================")
+        event_norm = event.replace(",", "").upper().strip()
+        is_relay = event_norm.startswith("4X") or "Relay" in event_norm
+        if is_relay:
+            cols = ["place", "team", "time", "qualifies"]
+        else:
+            cols = ["place", "athlete", "time", "qualifies"]
+        print(df[cols])
+        print("=================================================\n")
+
+    elif year == 2026:
+        big_df = pd.read_csv("all_results_2021_2025.csv")
+        print("Loaded master CSV with", len(big_df), "rows")
+
+        predict_qualifying_for(big_df, division, gender, event)
+    
+    else:
+        print("Year must be between 2021 and 2026.")
+        return
 
 if __name__ == "__main__":
     main()
-    test_scraper()
+    #test_scraper()
