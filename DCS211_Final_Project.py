@@ -9,6 +9,7 @@ import re
 from sklearn.neighbors import KNeighborsRegressor
 import glob
 from sklearn.neighbors import KNeighborsRegressor
+import time
 
 #Ryan and Miles
 
@@ -135,12 +136,23 @@ D1_URLS = {
     2023: "https://www.tfrrs.org/lists/4044/2023_NCAA_Division_I_All_Schools_Rankings",
     2022: "https://www.tfrrs.org/lists/3711/2022_NCAA_Division_I_Outdoor_Qualifying_FINAL",
     2021: "https://api.tfrrs.org/lists/3191/2021_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2020: "https://www.tfrrs.org/lists/2909/2020_NCAA_Division_I_Outdoor_Qualifying",
+    2019: "https://upload.tfrrs.org/lists/2568/2019_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2018: "https://www.tfrrs.org/lists/2279/2018_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2017: "https://www.tfrrs.org/lists/1912/2017_NCAA_Div_I_Outdoor_Qualifying_FINAL",
+    2016: "https://www.tfrrs.org/lists/1688/2016_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2015: "https://api.tfrrs.org/lists/1439/2015_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2014: "https://www.tfrrs.org/lists/1228/2014_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2013: "https://www.tfrrs.org/lists/1029/2013_NCAA_Division_I_Outdoor_Qualifying_FINAL",
+    2012: "https://www.tfrrs.org/lists/840/2012_NCAA_Div_I_Outdoor_Qualifiers_Final",
+    2011: "https://www.tfrrs.org/lists/673/2011_NCAA_Division_I_Outdoor_POP_List_FINAL",
+    2010: "https://tf.tfrrs.org/lists/528/2010_NCAA_Division_I_Outdoor_POP_List_FINAL"
 }
 
 def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
     base_url = D1_URLS[year]
 
-    resp = requests.get(base_url, headers=headers, timeout=10)
+    resp = requests.get(base_url, headers=headers, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -233,16 +245,27 @@ def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
 
 D2_URLS = {
     2025: "https://www.tfrrs.org/lists/5019/2025_NCAA_Division_II_Outdoor_Qualifying_FINAL",
-    2024: "https://mobile.tfrrs.org/lists/4516/2024_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2024: "https://www.tfrrs.org/lists/4516/2024_NCAA_Division_II_Outdoor_Qualifying_FINAL",
     2023: "https://www.tfrrs.org/lists/4045/2023_NCAA_Division_II_Outdoor_Qualifying_FINAL",
     2022: "https://www.tfrrs.org/lists/3595/2022_NCAA_Division_II_Outdoor_Qualifying_FINAL",
     2021: "https://www.tfrrs.org/lists/3194/2021_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2020: "https://www.tfrrs.org/lists/2908/2020_NCAA_Div_II_Outdoor_Qualifying",
+    2019: "https://www.tfrrs.org/lists/2571/2019_NCAA_Div_II_Outdoor_Qualifying_FINAL",
+    2018: "https://www.tfrrs.org/lists/2282/2018_NCAA_Div_II_Outdoor_Qualifying_FINAL",
+    2017: "https://www.tfrrs.org/lists/1913/2017_NCAA_Div_II_Outdoor_Qualifying_FINAL",
+    2016: "https://www.tfrrs.org/lists/1685/2016_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2015: "https://www.tfrrs.org/lists/1442/2015_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2014: "https://www.tfrrs.org/lists/1231/2014_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2013: "https://www.tfrrs.org/lists/1032/2013_NCAA_Division_II_Outdoor_Qualifying_FINAL",
+    2012: "https://www.tfrrs.org/lists/841/2012_NCAA_Div_II_Outdoor_Qualifier_List_Final",
+    2011: "https://www.tfrrs.org/lists/674/2011_NCAA_Division_II_Outdoor_POP_List_FINAL",
+    2010: "https://www.tfrrs.org/lists/529/2010_NCAA_Division_II_Outdoor_POP_List_Final"
 }
 
 def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
     base_url = D2_URLS[year]
 
-    resp = requests.get(base_url, headers=headers, timeout=10)
+    resp = requests.get(base_url, headers=headers, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -335,16 +358,27 @@ def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
 D3_URLS = {
     2025: "https://www.tfrrs.org/lists/5020/2025_NCAA_Division_III_Outdoor_Qualifying_FINAL",
     2024: "https://tfrrs.org/lists/4517/2024_NCAA_Division_III_Outdoor_Qualifying_FINAL",
-    2023: "https://tf.tfrrs.org/lists/4043/2023_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2023: "https://www.tfrrs.org/lists/4043/2023_NCAA_Division_III_Outdoor_Qualifying_FINAL",
     2022: "https://www.tfrrs.org/lists/3714/2022_NCAA_Division_III_Outdoor_Qualifying_FINAL",
-    2021: "https://api.tfrrs.org/lists/3195/2021_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2021: "https://www.tfrrs.org/lists/3195/2021_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2020: "https://tfrrs.org/lists/2907/2020_NCAA_Div_III_Outdoor_Qualifying",
+    2019: "https://www.tfrrs.org/lists/2572/2019_NCAA_Div_III_Outdoor_Qualifying_FINAL",
+    2018: "https://www.tfrrs.org/lists/2283/2018_NCAA_Div_III_Outdoor_Qualifying_FINAL",
+    2017: "https://www.tfrrs.org/lists/1914/2017_NCAA_Div_III_Outdoor_Qualifying_FINAL",
+    2016: "https://www.tfrrs.org/lists/1684/2016_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2015: "https://www.tfrrs.org/lists/1443/2015_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2014: "https://www.tfrrs.org/lists/1232/2014_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2013: "https://www.tfrrs.org/lists/1033/2013_NCAA_Division_III_Outdoor_Qualifying_FINAL",
+    2012: "https://www.tfrrs.org/lists/842/2012_NCAA_Div_III_Outdoor_Qualifier_List",
+    2011: "https://www.tfrrs.org/lists/675/2011_NCAA_Division_III_Outdoor_POP_List_FINAL",
+    2010: "https://www.tfrrs.org/lists/530/2010_NCAA_Division_III_Outdoor_Track__Field"
 }
 
 def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
     base_url = D3_URLS[year]
 
 
-    resp = requests.get(base_url, headers=headers, timeout=10)
+    resp = requests.get(base_url, headers=headers, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -429,7 +463,7 @@ def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
 
     return df
 
-''' 
+'''
 #make CSV's
 
 
@@ -438,7 +472,7 @@ DIVISIONS = {
     "D2": scrapeTffrsD2,
     "D3": scrapeTffrsD3
 }
-YEARS = [2021, 2022, 2023, 2024, 2025]
+YEARS = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 GENDERS = ["men", "women"]
 
 for div, scraper in DIVISIONS.items():
@@ -463,9 +497,10 @@ for div, scraper in DIVISIONS.items():
                     filename = f"{div}_{year}_{event}_{gender}.csv"
                     df.to_csv(filename, index=False)
                     print("Saved:", filename)
-                except Exception as e:
+                except Exception as e: #stop from crahing entire loop
                     print("Error:", div, year, gender, event, e)
 
+                time.sleep(0.5) #added to give TFFRS a break between requests
 
 files = glob.glob("*.csv") # Finds every file in the current folder that ends with .csv  and puts them in a list
 
@@ -473,9 +508,9 @@ all_dfs = [pd.read_csv(f) for f in files] # Loops through the list of filenames 
                                           # all_dfs becomes a list like: [df1, df2, df3, ...]
 
 big_df = pd.concat(all_dfs, ignore_index=True) #Combines all DataFrames into one giant DataFrame
-big_df.to_csv("all_results_2021_2025.csv", index=False)  
+big_df.to_csv("all_results_2010_2025.csv", index=False)  
 
-''' 
+'''
 
 def time_to_seconds(t: str) -> float:
     """
@@ -536,7 +571,11 @@ def predict_qualifying_for(big_df: pd.DataFrame,
                            gender: str,
                            event: str):
     div = division.upper()
-    gender_norm = gender.lower()
+    gender_norm = gender.lower().strip()
+    if gender_norm in ["mens", "men's"]:
+        gender_norm = "men"
+    if gender_norm in ["womens", "women's"]:
+        gender_norm = "women"
     event_norm = event
     cutoff = cutoff_place_for(div, event_norm)
 
@@ -575,8 +614,19 @@ def predict_qualifying_for(big_df: pd.DataFrame,
         print(f"No valid times for {div} {gender_norm} {event_norm}")
         return
 
-    X = df_slice[["year"]].values #convert to NumPy array 
-    y = df_slice["time_seconds"].values #convert to NumPy array
+    recent = df_slice[df_slice["year"] >= 2021] #use only recent years 
+
+    if len(recent) >= 3:
+        df_recent = recent
+    else:
+        df_recent = df_slice   # fallback to use all years
+
+    if df_recent.empty:
+        print(f"No valid times for {div} {gender_norm} {event_norm}")
+        return
+
+    X = df_recent[["year"]].values #convert to NumPy array 
+    y = df_recent["time_seconds"].values #convert to NumPy array
 
     k = min(3, len(X))
     knn = KNeighborsRegressor(n_neighbors=k, weights="distance") #K nearest neighbors regression model, and making closer years count more than older years
@@ -658,16 +708,16 @@ def getScraperForDivision(division: str):
         return scrapeTffrsD3
 
 def main():
-    ''' 
+    '''
     # Load the master dataset
     big_df = pd.read_csv("all_results_2021_2025.csv")
     print("Loaded master CSV with", len(big_df), "rows")
     
     # Run predictions for every event/div/gender
     run_all_predictions(big_df)
-    ''' 
+     '''
     parser = argparse.ArgumentParser(description="TFFRS scraper + predict NCAA qualifying marks for 2026")
-    parser.add_argument("year", type=int, help="Year of interest (2021-2026)",)
+    parser.add_argument("year", type=int, help="Year of interest (2010-2026)",)
     parser.add_argument("division", type=str, help="NCAA division (D1, D2, or D3)",)
     parser.add_argument("gender", type=str, help="Gender (men or women)",)
     parser.add_argument("event", type=str, help='Event code (e.g. "100", "1500", "4x100", "100H"/"110H")',)
@@ -679,7 +729,7 @@ def main():
     gender = args.gender
     event = args.event
 
-    if 2021 <= year <= 2025:
+    if 2010 <= year <= 2025:
         scraper = getScraperForDivision(division)
         print(f"Scraping {division} {gender} {event} for {year}...")
         df = scraper(year, gender, event)
@@ -703,13 +753,13 @@ def main():
         print("=================================================\n")
 
     elif year == 2026:
-        big_df = pd.read_csv("all_results_2021_2025.csv")
+        big_df = pd.read_csv("all_results_2010_2025.csv")
         print("Loaded master CSV with", len(big_df), "rows")
 
         predict_qualifying_for(big_df, division, gender, event)
     
     else:
-        print("Year must be between 2021 and 2026.")
+        print("Year must be between 201o and 2026.")
         return
 
 if __name__ == "__main__":
