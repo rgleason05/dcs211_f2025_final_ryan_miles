@@ -97,7 +97,7 @@ df.to_csv("100m_men_2025.csv", index=False)
 
 def clean_time(raw_time: str) -> str:
      """
-    Normalize TFRRS time strings by removing any unwanted characters.
+    This function Normalize TFRRS time strings by removing any unwanted characters.
     This function keeps only digits, colons, and periods to preserve
     valid time formats.
     
@@ -150,6 +150,32 @@ D1_URLS = {
 }
 
 def scrapeTffrsD1(year: int, gender: str, event: str) -> pd.DataFrame:
+    """
+
+    This function scrapes NCAA Division I Outdoor Qualifying results for a given year, gender,
+    and event from the TFRRS website.
+
+    This function:
+      • Downloads the HTML page for the specified year's D1 qualifying list.  
+      • Locates the specific event block using the event mapping extracted
+        from the page. 
+      • Supports both men's and women's result tables.  
+      • Detects relay events and extracts relay‑specific fields.  
+      • Converts times into cleaned, standardized strings.  
+      • Adds qualifying logic.
+
+    Parameters: 
+
+    year : int
+        The year of the national qualifing 
+    gender : str
+        men's or women's events 
+    event : str
+        The event label as it appears in TFRRS
+
+    Returns: pd.DataFrame - A DataFrame containing one row per athlete or relay including other information such as time, gender, place etc..
+
+    """
     base_url = D1_URLS[year]
 
     resp = requests.get(base_url, headers=headers, timeout=30)
@@ -263,6 +289,31 @@ D2_URLS = {
 }
 
 def scrapeTffrsD2(year: int, gender: str, event: str) -> pd.DataFrame:
+    """
+     This function scrapes NCAA Division II Outdoor Qualifying results for a given year, gender,
+    and event from the TFRRS website.
+
+    This function:
+      • Downloads the HTML page for the specified year's D2 qualifying list.  
+      • Locates the specific event block using the event mapping extracted
+        from the page. 
+      • Supports both men's and women's result tables.  
+      • Detects relay events and extracts relay‑specific fields.  
+      • Converts times into cleaned, standardized strings.  
+      • Adds qualifying logic.
+
+    Parameters: 
+
+    year : int
+        The year of the national qualifing 
+    gender : str
+        men's or women's events 
+    event : str
+        The event label as it appears in TFRRS
+
+    Returns: pd.DataFrame - A DataFrame containing one row per athlete or relay including other information such as time, gender, place etc..
+
+    """
     base_url = D2_URLS[year]
 
     resp = requests.get(base_url, headers=headers, timeout=30)
@@ -375,6 +426,31 @@ D3_URLS = {
 }
 
 def scrapeTffrsD3(year: int, gender: str, event: str) -> pd.DataFrame:
+    """
+     This function scrapes NCAA Division I Outdoor Qualifying results for a given year, gender,
+    and event from the TFRRS website.
+
+    This function:
+      • Downloads the HTML page for the specified year's D1 qualifying list.  
+      • Locates the specific event block using the event mapping extracted
+        from the page. 
+      • Supports both men's and women's result tables.  
+      • Detects relay events and extracts relay‑specific fields.  
+      • Converts times into cleaned, standardized strings.  
+      • Adds qualifying logic.
+
+    Parameters: 
+
+    year : int
+        The year of the national qualifing 
+    gender : str
+        men's or women's events 
+    event : str
+        The event label as it appears in TFRRS
+
+    Returns: pd.DataFrame - A DataFrame containing one row per athlete or relay including other information such as time, gender, place etc..
+
+    """
     base_url = D3_URLS[year]
 
 
@@ -514,8 +590,13 @@ big_df.to_csv("all_results_2010_2025.csv", index=False)
 
 def time_to_seconds(t: str) -> float:
     """
-    Convert a time string like '10.22', '1:48.35', '14:03.12'
-    into total seconds as a float.
+    This function converts and athletes time str into total seconds. 
+
+    Parameters: 
+    t : str - Raw time string scraped from TFRRS
+
+    Returns: 
+    float: Total time in seconds. If empty no value is shown. 
     """
     t = str(t).strip()
     if not t:
@@ -538,8 +619,13 @@ def time_to_seconds(t: str) -> float:
 
 def seconds_to_time_str(seconds: float) -> str:
     """
-    Convert seconds back into a string like '10.22' or '3:45.12'.
-    Very simple: MM:SS.ss if >= 60, else SS.ss
+     This function converts a time value in seconds back into a formatted string.
+
+    Parameters:
+    seconds : float - Total time in seconds 
+
+    Returns:
+    str: A formatted time string the way the time appears on TFFRS. 
     """
     if seconds < 60:
         return f"{seconds:0.2f}"
@@ -551,10 +637,24 @@ def seconds_to_time_str(seconds: float) -> str:
 
 def cutoff_place_for(division: str, event: str) -> int:
     """
-    Return the qualifying place for this division/event.
-    Relays: 16
-    D1: 48
-    D2/D3: 22
+    This function determines the qualifying-place cutoff for a given NCAA division and event.
+
+    This function normalizes the event name and detects relays.  
+    Relay events always use a top‑16 cutoff.  
+    Individual events use:
+        • Division I  → top 48  
+        • Division II → top 22  
+        • Division III → top 22
+
+    Parameters: 
+    division : str
+        NCAA division label 
+    event : str
+        Event name as scraped or provided by the user
+       
+
+    Returns:
+    int: The qualifying place cutoff for this division and event.
     """
     event_norm = event.replace(",", "").upper().strip()
     is_relay = event_norm.startswith("4X") or "RELAY" in event_norm
@@ -566,10 +666,28 @@ def cutoff_place_for(division: str, event: str) -> int:
     else:
         return 22
 
-def predict_qualifying_for(big_df: pd.DataFrame,
-                           division: str,
-                           gender: str,
-                           event: str):
+def predict_qualifying_for(big_df: pd.DataFrame, division: str, gender: str, event: str):
+    """
+    This function predicts the national qualifying cutoff mark for a given division, gender,
+    and event using historical TFRRS data.
+
+    This function:
+      • Normalizes gender input 
+      • Determines the qualifying cutoff place 
+      • Extracts historical results for ONLY athletes/teams at that cutoff place
+      • Converts times to seconds
+      • Uses a KNN regression model using recent years (>= 2021)
+      • Falls back to all years if not enough recent data
+      • Prints the predicted qualifying time for 2026
+
+    Parameters: 
+    big_df : pd.DataFrame - Full dataset of all scraped results 
+    division : str - NCAA division 
+    gender : str - men or women
+    event : str -  Normalized event code as seen on TFFRS
+    
+    Returns: None 
+    """
     div = division.upper()
     gender_norm = gender.lower().strip()
     if gender_norm in ["mens", "men's"]:
@@ -643,6 +761,18 @@ def predict_qualifying_for(big_df: pd.DataFrame,
 
 '''
 def run_all_predictions(big_df: pd.DataFrame):
+    """
+    This function generates and print 2026 qualifying predictions for all NCAA divisions,
+    both genders, and all standard track running events. 
+
+    Parameters:
+    big_df : pd.DataFrame - A dataframe containing historical TFRRS results with many colums 
+
+    Returns: None
+        
+    """
+    
+    
     DIVISIONS = ["D1", "D2", "D3"]
     GENDERS = ["men", "women"]
 
