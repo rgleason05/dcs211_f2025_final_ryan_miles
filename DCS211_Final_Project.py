@@ -114,9 +114,28 @@ def clean_time(raw_time: str) -> str:
         
      return cleaned
 
-# EXTRACT EVENT ID FUNCTION
 
 def extractEventMapping(soup: BeautifulSoup) -> Dict[str, str]:
+    '''
+    This function scans the TFRRS page  and finds all links
+    whose href begins with "#event". These links correspond to different
+    events (100m, 1500m, 4x100 relay). The function then builds a
+    dictionary mapping each event's internal anchor ID ("event6")
+    to its human-readable label ("100 Meters").
+
+    Parameters:
+        soup (BeautifulSoup):
+            Parsed HTML content of a TFRRS qualifying list page.
+
+    Returns:
+        Dict[str, str]:
+            A dictionary mapping event IDs to event labels.
+            Example:
+                {
+                    "event6": "100 Meters",
+                    "event12": "1500 Meters",
+                }
+    '''
     mapping = {}
 
     for a in soup.select("li a[href^='#event']"): # Select all <a> tags within <li> that have href starting with '#event'(^=)
@@ -829,6 +848,16 @@ def test_scraper():
 ''' 
 
 def getScraperForDivision(division: str):
+    '''
+    Return the appropriate scraper function based on NCAA division.
+    
+    Parameters:
+        division (str): Division code provided by the user ("D1", "D2", or "D3").
+
+    Returns:
+        function: A scraper function corresponding to the requested division.
+    
+    '''
     div = division.upper()
     if div == "D1":
         return scrapeTffrsD1
