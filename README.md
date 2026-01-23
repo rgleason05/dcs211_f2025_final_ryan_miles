@@ -46,6 +46,11 @@ The goal of this project was to build a robust Python pipeline capable of:
 
 ---
 
+The file `all_results_2010_2025.csv` is included in this repository and is required to run the program.
+Place it in the same directory as `DCS211_Final_Project.py` before executing the script.
+
+---
+
 ### 🔧 Installation Instructions
 
 To install all required libraries at once, run:
