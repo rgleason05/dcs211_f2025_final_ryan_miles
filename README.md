@@ -44,6 +44,9 @@ The goal of this project was to build a robust Python pipeline capable of:
 6. **glob** *(built-in; no installation needed)*  
    Helps load and combine multiple CSV files automatically.
 
+7. **streamlit**   
+   Provides a graphical user interface (GUI) that allows users to interact with the project through a web-based application instead of the command line.
+
 ---
 
 The file `all_results_2010_2025.csv` is included in this repository and is required to run the program.
@@ -56,4 +59,4 @@ Place it in the same directory as `DCS211_Final_Project.py` before executing the
 To install all required libraries at once, run:
 
 ```bash
-pip install requests beautifulsoup4 pandas numpy scikit-learn
+pip install requests beautifulsoup4 pandas numpy scikit-learn streamlit
