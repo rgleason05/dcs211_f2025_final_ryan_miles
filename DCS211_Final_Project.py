@@ -772,11 +772,13 @@ def predict_qualifying_for(big_df: pd.DataFrame, division: str, gender: str, eve
     pred_sec = knn.predict([[2026]])[0] #2026 array with 1 value (predicted seconds)
     pred_str = seconds_to_time_str(pred_sec)
 
-    print("\n==================================================")
-    print(f"Predicted qualifying mark for {div} {gender_norm} {event_norm}, 2026:")
-    print(f"→ Qualifying place: {cutoff}")
-    print(f"→ Predicted cutoff time: {pred_str}")
-    print("==================================================")
+    return f"""
+    ==================================================
+    Predicted qualifying mark for {div} {gender_norm} {event_norm}, 2026:
+    Qualifying place: {cutoff}
+    Predicted cutoff time: {pred_str}
+    ==================================================
+    """
 
 '''
 def run_all_predictions(big_df: pd.DataFrame):
