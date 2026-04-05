@@ -868,6 +868,66 @@ def getScraperForDivision(division: str):
     else: 
         return scrapeTffrsD3
 
+
+def scrape_athlete_page(url: str) -> pd.DataFrame:
+    resp = requests.get(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    results = []
+
+    meet_tables = soup.select("#meet-results table")
+
+    current_meet = None
+    current_date = None
+
+    for table in meet_tables:
+        header_link = table.select_one("thead a")
+        header_span = table.select_one("thead span")
+
+        if header_link:
+            current_meet = header_link.get_text(strip=True)
+            current_meet_url = header_link.get("href")
+        else:
+            current_meet = ""
+            current_meet_url = ""
+
+        if header_span:
+            current_date = header_span.get_text(strip=True)
+        else:
+            current_date = ""
+
+        rows = table.select("tr")
+        for row in rows:
+            cells = row.find_all("td")
+            if len(cells) != 3:
+                continue
+
+            event = cells[0].get_text(strip=True)
+
+            mark_link = cells[1].find("a")
+            if mark_link:
+                mark = mark_link.get_text(strip=True)
+                mark_url = mark_link.get("href")
+            else:
+                mark = cells[1].get_text(strip=True)
+                mark_url = ""
+
+            place = cells[2].get_text(strip=True)
+
+            results.append({
+                "meet": current_meet,
+                "meet_url": current_meet_url,
+                "date": current_date,
+                "event": event,
+                "mark": mark,
+                "mark_url": mark_url,
+                "place": place,
+            })
+    return pd.DataFrame(results)
+
+
+
 def main():
     '''
     # Load the master dataset
@@ -910,7 +970,7 @@ def main():
             cols = ["place", "team", "time", "qualifies"]
         else:
             cols = ["place", "athlete", "time", "qualifies"]
-        print(df[cols])
+            print(df[cols])
         print("=================================================\n")
 
     elif year == 2026:
@@ -920,7 +980,7 @@ def main():
         predict_qualifying_for(big_df, division, gender, event)
     
     else:
-        print("Year must be between 201o and 2026.")
+        print("Year must be between 2010 and 2026.")
         return
 
 if __name__ == "__main__":
