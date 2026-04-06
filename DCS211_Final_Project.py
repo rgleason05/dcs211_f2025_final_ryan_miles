@@ -780,7 +780,7 @@ def predict_qualifying_for(big_df: pd.DataFrame, division: str, gender: str, eve
     ==================================================
     """
 
-'''
+
 def run_all_predictions(big_df: pd.DataFrame):
     """
     This function generates and print 2026 qualifying predictions for all NCAA divisions,
@@ -821,7 +821,7 @@ def run_all_predictions(big_df: pd.DataFrame):
 
 
 
-
+'''
 def test_scraper():
     print("\n=== TEST D1 1500m MEN ===")
     df1 = scrapeTffrsD1(2023, "men", "1500")
@@ -870,6 +870,7 @@ def getScraperForDivision(division: str):
 
 
 def scrape_athlete_page(url: str) -> pd.DataFrame:
+
     resp = requests.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -926,17 +927,30 @@ def scrape_athlete_page(url: str) -> pd.DataFrame:
             })
     return pd.DataFrame(results)
 
+def try_time_to_seconds(mark: str):
+    try:
+        if mark in ["DNF", "DNS", "NM", ""]:
+            return None
+        parts = str(mark).split(":")
+        if len(parts) == 1:
+            return float(parts[0])
+        elif len(parts) == 2:
+            return float(parts[0]) * 60 + float(parts[1])
+        else:
+            return None
+    except:
+        return None
 
 
 def main():
-    '''
+
     # Load the master dataset
     big_df = pd.read_csv("all_results_2021_2025.csv")
     print("Loaded master CSV with", len(big_df), "rows")
     
     # Run predictions for every event/div/gender
     run_all_predictions(big_df)
-     '''
+     
     parser = argparse.ArgumentParser(description="TFFRS scraper + predict NCAA qualifying marks for 2026")
     parser.add_argument("year", type=int, help="Year of interest (2010-2026)",)
     parser.add_argument("division", type=str, help="NCAA division (D1, D2, or D3)",)
@@ -983,6 +997,13 @@ def main():
         print("Year must be between 2010 and 2026.")
         return
 
+
+    url = "https://www.tfrrs.org/athletes/8582674/Bates/Miles_Logan.html"
+    df = scrape_athlete_page(url)
+    print(df.head(20))
+    print(df)
+
+    
 if __name__ == "__main__":
     main()
     #test_scraper()
